@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
 import torch
+import matplotlib.pyplot as plt
 
 from utils import (
     load_valid_csv,
@@ -73,12 +74,14 @@ class AutoEncoder(nn.Module):
         # Implement the function as described in the docstring.             #
         # Use sigmoid activations for f and g.                              #
         #####################################################################
-        out = inputs
+        # out = inputs
+
+        g_output = torch.sigmoid(self.g(inputs))
+        out = torch.sigmoid(self.h(g_output))
         #####################################################################
         #                       END OF YOUR CODE                            #
         #####################################################################
         return out
-
 
 def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     """Train the neural network, where the objective also includes
@@ -113,18 +116,23 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             output = model(inputs)
 
             # Mask the target to only compute the gradient of valid entries.
-            nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
+            nan_mask = np.isnan(train_data[user_id].numpy())
             target[0][nan_mask] = output[0][nan_mask]
 
-            loss = torch.sum((output - target) ** 2.0)
+            # Compute the loss with regularization
+            # loss = torch.sum((output - target) ** 2.0) + lamb * model.get_weight_norm()
+
+            loss = torch.sum((output - target) ** 2.0) + (lamb / 2) * model.get_weight_norm()  # Added regularization term
             loss.backward()
 
             train_loss += loss.item()
             optimizer.step()
 
+            
+
         valid_acc = evaluate(model, zero_train_data, valid_data)
         print(
-            "Epoch: {} \tTraining Cost: {:.6f}\t " "Valid Acc: {}".format(
+            "Epoch: {} \tTraining Cost: {:.6f}\t Valid Acc: {}".format(
                 epoch, train_loss, valid_acc
             )
         )
@@ -168,16 +176,190 @@ def main():
     # validation set.                                                   #
     #####################################################################
     # Set model hyperparameters.
-    k = None
-    model = None
+    # k = None
+    # model = None
+
+    # ks = [10, 50, 100, 200, 500]
+    # best_k = ks[0]
+    # best_acc = 0
+    # best_model = None
+
+    # # Set optimization hyperparameters.
+    # lr = 0.01
+    # num_epoch = 50
+    # lamb = 0.001
+
+    # # train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
+    # # Next, evaluate your network on validation/test data
+    # for k in ks:
+    #     print(f'Training model with k={k}')
+    #     model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
+        
+    #     training_losses = []
+    #     validation_accuracies = []
+
+    #     for epoch in range(num_epoch):
+    #         model.train()
+    #         train_loss = 0.0
+
+    #         for user_id in range(train_matrix.shape[0]):
+    #             inputs = Variable(zero_train_matrix[user_id]).unsqueeze(0)
+    #             target = inputs.clone()
+
+    #             optimizer = optim.Adam(model.parameters(), lr=lr)
+    #             optimizer.zero_grad()
+    #             output = model(inputs)
+
+    #             # Mask the target to only compute the gradient of valid entries.
+    #             nan_mask = np.isnan(train_matrix[user_id].numpy())
+    #             target[0][nan_mask] = output[0][nan_mask]
+
+    #             # Compute the loss with regularization
+    #             loss = torch.sum((output - target) ** 2.0) + lamb * model.get_weight_norm()
+    #             loss.backward()
+
+    #             train_loss += loss.item()
+    #             optimizer.step()
+
+    #         training_losses.append(train_loss)
+    #         valid_acc = evaluate(model, zero_train_matrix, valid_data)
+    #         validation_accuracies.append(valid_acc)
+
+    #         print(
+    #             "Epoch: {} \tTraining Cost: {:.6f}\t Valid Acc: {}".format(
+    #                 epoch, train_loss, valid_acc
+    #             )
+    #         )
+        
+    #     valid_acc = evaluate(model, zero_train_matrix, valid_data)
+    #     print(f'Validation accuracy for k={k}: {valid_acc}')
+        
+    #     if valid_acc > best_acc:
+    #         best_acc = valid_acc
+    #         best_k = k
+    #         best_model = model
+    #         best_train_losses = training_losses
+    #         best_valid_accuracies = validation_accuracies
+    
+    # print(f'Best k: {best_k} with validation accuracy: {best_acc}')
+
+    # # Evaluate on the test data with the best model
+    # test_acc = evaluate(best_model, zero_train_matrix, test_data)
+    # print(f'Test accuracy with best k={best_k}: {test_acc}')
+
+    # # Plot training losses and validation accuracies
+    # epochs = range(num_epoch)
+    # plt.figure(figsize=(12, 6))
+
+    # plt.subplot(1, 2, 1)
+    # plt.plot(epochs, best_train_losses, label='Training Loss')
+    # plt.xlabel('Epochs')
+    # plt.ylabel('Loss')
+    # plt.title('Training Loss vs Epochs')
+    # plt.legend()
+
+    # plt.subplot(1, 2, 2)
+    # plt.plot(epochs, best_valid_accuracies, label='Validation Accuracy')
+    # plt.xlabel('Epochs')
+    # plt.ylabel('Accuracy')
+    # plt.title('Validation Accuracy vs Epochs')
+    # plt.legend()
+
+    # plt.tight_layout()
+    # plt.show()
+
+    ks = [10, 50, 100, 200, 500]
+    best_k = ks[0]
+    best_acc = 0
+    best_model = None
 
     # Set optimization hyperparameters.
-    lr = None
-    num_epoch = None
-    lamb = None
+    lr = 0.001
+    num_epoch = 50
+    lambdas = [0.001, 0.01, 0.1, 1]
 
-    train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
-    # Next, evaluate your network on validation/test data
+    best_train_losses = None
+    best_valid_accuracies = None
+
+    for k in ks:
+        for lamb in lambdas:
+            print(f'Training model with k={k} and lambda={lamb}')
+            model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
+
+            training_losses = []
+            validation_accuracies = []
+
+            for epoch in range(num_epoch):
+                model.train()
+                train_loss = 0.0
+
+                for user_id in range(train_matrix.shape[0]):
+                    inputs = Variable(zero_train_matrix[user_id]).unsqueeze(0)
+                    target = inputs.clone()
+
+                    optimizer = optim.Adam(model.parameters(), lr=lr)
+                    optimizer.zero_grad()
+                    output = model(inputs)
+
+                    # Mask the target to only compute the gradient of valid entries.
+                    nan_mask = np.isnan(train_matrix[user_id].numpy())
+                    target[0][nan_mask] = output[0][nan_mask]
+
+                    # Compute the loss with regularization
+                    loss = torch.sum((output - target) ** 2.0) + (lamb / 2) * model.get_weight_norm()
+                    loss.backward()
+
+                    train_loss += loss.item()
+                    optimizer.step()
+
+                training_losses.append(train_loss)
+                valid_acc = evaluate(model, zero_train_matrix, valid_data)
+                validation_accuracies.append(valid_acc)
+
+                print(
+                    "Epoch: {} \tTraining Cost: {:.6f}\t Valid Acc: {}".format(
+                        epoch, train_loss, valid_acc
+                    )
+                )
+
+            valid_acc = evaluate(model, zero_train_matrix, valid_data)
+            print(f'Validation accuracy for k={k}, lambda={lamb}: {valid_acc}')
+
+            if valid_acc > best_acc:
+                best_acc = valid_acc
+                best_k = k
+                best_lambda = lamb
+                best_model = model
+                best_train_losses = training_losses
+                best_valid_accuracies = validation_accuracies
+
+    print(f'Best k: {best_k}, best lambda: {best_lambda} with validation accuracy: {best_acc}')
+
+    # Evaluate on the test data with the best model
+    test_acc = evaluate(best_model, zero_train_matrix, test_data)
+    print(f'Test accuracy with best k={best_k}, best lambda={best_lambda}: {test_acc}')
+
+    # Plot training losses and validation accuracies
+    epochs = range(num_epoch)
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, best_train_losses, label='Training Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training Loss vs Epochs')
+    plt.legend()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, best_valid_accuracies, label='Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.title('Validation Accuracy vs Epochs')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
 
     #####################################################################
     #                       END OF YOUR CODE                            #
@@ -186,3 +368,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
