@@ -73,7 +73,8 @@ class AutoEncoder(nn.Module):
         # Implement the function as described in the docstring.             #
         # Use sigmoid activations for f and g.                              #
         #####################################################################
-        out = inputs
+        out = torch.sigmoid(self.g(inputs))
+        out = torch.sigmoid(self.h(out))
         #####################################################################
         #                       END OF YOUR CODE                            #
         #####################################################################
