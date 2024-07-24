@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
 import torch
+import matplotlib.pyplot as plt
 
 from utils import (
     load_valid_csv,
@@ -118,6 +119,11 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             target[nan_mask] = output[nan_mask]
 
             loss = torch.sum((output - target) ** 2.0)
+            
+            # Add L2 regularization term
+            regularization = (model.get_weight_norm() / 2) * lamb
+            loss += regularization
+
             loss.backward()
 
             train_loss += loss.item()
@@ -169,16 +175,217 @@ def main():
     # validation set.                                                   #
     #####################################################################
     # Set model hyperparameters.
-    k = None
-    model = None
+    # k = None
+    # model = None
 
-    # Set optimization hyperparameters.
-    lr = None
-    num_epoch = None
-    lamb = None
+    # # Set optimization hyperparameters.
+    # lr = None
+    # num_epoch = None
+    # lamb = None
 
-    train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
-    # Next, evaluate your network on validation/test data
+    # train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
+    # # Next, evaluate your network on validation/test data
+
+#####################################################################
+
+    # # Set model hyperparameters.
+    # latent_dims = [10, 50, 100, 200, 500]
+    # best_k = None
+    # best_model = None
+    # best_valid_acc = 0
+
+    # # Set optimization hyperparameters.
+    # lr = 0.01
+    # num_epoch = 50
+    # lamb = 0.001
+
+    # for k in latent_dims:
+    #     print(f"Training with latent dimension k={k}")
+    #     model = AutoEncoder(train_matrix.shape[1], k)
+    #     train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
+    #     valid_acc = evaluate(model, zero_train_matrix, valid_data)
+    #     print(f"Validation Accuracy for k={k}: {valid_acc:.4f}")
+
+    #     if valid_acc > best_valid_acc:
+    #         best_valid_acc = valid_acc
+    #         best_k = k
+    #         best_model = model
+
+    # print(f"Best latent dimension k*: {best_k} with validation accuracy: {best_valid_acc:.4f}")
+
+    # # Next, evaluate your network on test data
+    # test_acc = evaluate(best_model, zero_train_matrix, test_data)
+    # print(f"Test Accuracy for k*={best_k}: {test_acc:.4f}")    
+
+#####################################################################
+#   # Set model hyperparameters.
+#     k = 50
+#     model = AutoEncoder(train_matrix.shape[1], k)
+
+#     # Set optimization hyperparameters.
+#     lr = 0.01
+#     num_epoch = 50
+#     lamb = 0.001
+
+#     # Lists to store training loss and validation accuracy
+#     train_losses = []
+#     valid_accuracies = []
+
+#     # Define optimizer
+#     optimizer = optim.SGD(model.parameters(), lr=lr)
+#     num_student = train_matrix.shape[0]
+
+#     # Training loop
+#     for epoch in range(num_epoch):
+#         train_loss = 0.0
+#         model.train()  # Set model to training mode
+
+#         for user_id in range(num_student):
+#             inputs = Variable(zero_train_matrix[user_id]).unsqueeze(0)
+#             target = inputs.clone()
+
+#             optimizer.zero_grad()
+#             output = model(inputs)
+
+#             # Mask the target to only compute the gradient of valid entries.
+#             nan_mask = np.isnan(train_matrix[user_id].unsqueeze(0).numpy())
+#             target[nan_mask] = output[nan_mask]
+
+#             loss = torch.sum((output - target) ** 2.0)
+#             loss.backward()
+
+#             train_loss += loss.item()
+#             optimizer.step()
+
+#         train_losses.append(train_loss)
+#         valid_acc = evaluate(model, zero_train_matrix, valid_data)
+#         valid_accuracies.append(valid_acc)
+
+#         print(f"Epoch: {epoch+1} \tTraining Loss: {train_loss:.6f} \tValidation Accuracy: {valid_acc:.4f}")
+
+#     # Plotting training loss and validation accuracy
+#     epochs = range(1, num_epoch + 1)
+#     plt.figure(figsize=(12, 5))
+
+#     plt.subplot(1, 2, 1)
+#     plt.plot(epochs, train_losses, label='Training Loss')
+#     plt.xlabel('Epochs')
+#     plt.ylabel('Loss')
+#     plt.title('Training Loss per Epoch')
+#     plt.legend()
+
+#     plt.subplot(1, 2, 2)
+#     plt.plot(epochs, valid_accuracies, label='Validation Accuracy')
+#     plt.xlabel('Epochs')
+#     plt.ylabel('Accuracy')
+#     plt.title('Validation Accuracy per Epoch')
+#     plt.legend()
+
+#     plt.tight_layout()
+#     plt.show()
+
+#     # Evaluate on test data
+#     test_acc = evaluate(model, zero_train_matrix, test_data)
+#     print(f"Test Accuracy for k*={k}: {test_acc:.4f}")
+
+#####################################################################
+    # Set model hyperparameters.
+    k = 50
+    lambdas = [0.001, 0.01, 0.1, 1]
+    best_lambda = None
+    best_valid_acc = 0
+    best_model = None
+
+    best_train_losses = []
+    best_valid_accuracies = []
+
+    for lamb in lambdas:
+        print(f"Training with lambda={lamb}")
+        model = AutoEncoder(train_matrix.shape[1], k)
+
+        # Set optimization hyperparameters.
+        lr = 0.01
+        num_epoch = 50
+
+        # Lists to store training loss and validation accuracy
+        train_losses = []
+        valid_accuracies = []
+
+        # Define optimizer
+        optimizer = optim.SGD(model.parameters(), lr=lr)
+        num_student = train_matrix.shape[0]
+
+        # Training loop
+        for epoch in range(num_epoch):
+            train_loss = 0.0
+            model.train()  # Set model to training mode
+
+            for user_id in range(num_student):
+                inputs = Variable(zero_train_matrix[user_id]).unsqueeze(0)
+                target = inputs.clone()
+
+                optimizer.zero_grad()
+                output = model(inputs)
+
+                # Mask the target to only compute the gradient of valid entries.
+                nan_mask = np.isnan(train_matrix[user_id].unsqueeze(0).numpy())
+                target[nan_mask] = output[nan_mask]
+
+                loss = torch.sum((output - target) ** 2.0)
+
+                # Add L2 regularization term
+                regularization = (model.get_weight_norm() / 2) * lamb
+                loss += regularization
+
+                loss.backward()
+
+                train_loss += loss.item()
+                optimizer.step()
+
+            train_losses.append(train_loss)
+            valid_acc = evaluate(model, zero_train_matrix, valid_data)
+            valid_accuracies.append(valid_acc)
+
+            print(f"Epoch: {epoch+1} \tTraining Loss: {train_loss:.6f} \tValidation Accuracy: {valid_acc:.4f}")
+
+        final_valid_acc = valid_accuracies[-1]
+        print(f"Final Validation Accuracy for lambda={lamb}: {final_valid_acc:.4f}")
+
+        if final_valid_acc > best_valid_acc:
+            best_valid_acc = final_valid_acc
+            best_lambda = lamb
+            best_model = model
+            best_train_losses = train_losses
+            best_valid_accuracies = valid_accuracies
+
+    # Plotting training loss and validation accuracy for the best lambda
+    epochs = range(1, num_epoch + 1)
+    plt.figure(figsize=(12, 5))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, best_train_losses, label='Training Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training Loss per Epoch')
+    plt.legend()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, best_valid_accuracies, label='Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.title('Validation Accuracy per Epoch')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+    # Evaluate the best model on test data
+    test_acc = evaluate(best_model, zero_train_matrix, test_data)
+    print(f"Best lambda: {best_lambda}")
+    print(f"Final Validation Accuracy for best lambda={best_lambda}: {best_valid_acc:.4f}")
+    print(f"Test Accuracy for best lambda={best_lambda}: {test_acc:.4f}")
+
+
 
     #####################################################################
     #                       END OF YOUR CODE                            #
