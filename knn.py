@@ -44,7 +44,11 @@ def knn_impute_by_item(matrix, valid_data, k):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
-    acc = None
+    nbrs = KNNImputer(n_neighbors=k)
+    # Transpose the matrix to perform item-based imputation
+    mat = nbrs.fit_transform(matrix.T).T
+    acc = sparse_matrix_evaluate(valid_data, mat)
+    print("Validation Accuracy (Item-based): {}".format(acc))
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -67,7 +71,30 @@ def main():
     # the best performance and report the test accuracy with the        #
     # chosen k*.                                                        #
     #####################################################################
-    pass
+    ks = [1, 6, 11, 16, 21, 26]
+    val_accuracies_user = []
+    val_accuracies_item = []
+
+    for k in ks:
+        print(f"Running k-NN with k={k}")
+        val_acc = knn_impute_by_user(sparse_matrix, val_data, k)
+        val_accuracies_user.append(val_acc)
+
+        print(f"Running item-based k-NN with k={k}")
+        val_acc_item = knn_impute_by_item(sparse_matrix, val_data, k)
+        val_accuracies_item.append(val_acc_item)
+
+    plt.figure()
+    plt.plot(ks, val_accuracies_user, marker="o", label="User-based")
+    plt.plot(ks, val_accuracies_item, marker="o", label="Item-based")
+    plt.xlabel("k")
+    plt.ylabel("Validation Accuracy")
+    plt.title("Validation Accuracy for Different k")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    return
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
