@@ -52,19 +52,19 @@ def update_theta_beta(data, lr, theta, beta):
     :return: tuple of vectors
     """
     # gradient for parameters
-    dthetas = np.array([0 for _ in range(len(theta))], dtype=np.float32)
-    dbetas = np.array([0 for _ in range(len(beta))], dtype=np.float32)
+    d_theta = np.zeros(len(theta))
+    d_beta = np.zeros(len(beta))
 
-    for k in range(len(data['user_id'])):
-        i = data['user_id'][k]
-        j = data['question_id'][k]
-        c_ij = data['is_correct'][k]
+    # determining the gradient
+    for n in range(len(data["user_id"])):
+        i, j, c = data["user_id"][n], data["question_id"][n], data["is_correct"][n]
+        sig = sigmoid(theta[i] - beta[j])
+        d_theta[i] -= (c - sig)
+        d_beta[j] -= (sig - c)
 
-        dthetas[i] -= (c_ij - sigmoid(theta[i] - beta[j]))
-        dbetas[j] -= (sigmoid(theta[i] - beta[j]) - c_ij)
-
-    theta -= lr * dthetas
-    beta -= lr * dbetas
+    # performing the update
+    theta -= lr * d_theta
+    beta -= lr * d_beta
 
     return theta, beta
 
