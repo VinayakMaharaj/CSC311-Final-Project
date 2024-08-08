@@ -5,7 +5,7 @@ from utils import (
     load_train_sparse,
 )
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 def sigmoid(x):
     """Apply sigmoid function."""
@@ -23,14 +23,14 @@ def neg_log_likelihood(data, theta, beta):
     :param beta: Vector
     :return: float
     """
-    #####################################################################
-    # TODO:                                                             #
-    # Implement the function as described in the docstring.             #
-    #####################################################################
     log_lklihood = 0.0
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    epsilon = 1e-10  # to prevent a log error
+
+    for n in range(len(data["user_id"])):
+        i, j, c = data["user_id"][n], data["question_id"][n], data["is_correct"][n]
+        sig = sigmoid(theta[i] - beta[j])
+        log_lklihood += c * np.log(sig + epsilon) + (1 - c) * np.log(1 - sig + epsilon)
+
     return -log_lklihood
 
 
@@ -51,14 +51,21 @@ def update_theta_beta(data, lr, theta, beta):
     :param beta: Vector
     :return: tuple of vectors
     """
-    #####################################################################
-    # TODO:                                                             #
-    # Implement the function as described in the docstring.             #
-    #####################################################################
-    pass
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    # gradient for parameters
+    dthetas = np.array([0 for _ in range(len(theta))], dtype=np.float32)
+    dbetas = np.array([0 for _ in range(len(beta))], dtype=np.float32)
+
+    for k in range(len(data['user_id'])):
+        i = data['user_id'][k]
+        j = data['question_id'][k]
+        c_ij = data['is_correct'][k]
+
+        dthetas[i] -= (c_ij - sigmoid(theta[i] - beta[j]))
+        dbetas[j] -= (sigmoid(theta[i] - beta[j]) - c_ij)
+
+    theta -= lr * dthetas
+    beta -= lr * dbetas
+
     return theta, beta
 
 
@@ -75,21 +82,25 @@ def irt(data, val_data, lr, iterations):
     :param iterations: int
     :return: (theta, beta, val_acc_lst)
     """
-    # TODO: Initialize theta and beta.
-    theta = None
-    beta = None
+    # initialize theta and beta
+    theta = np.zeros(len(set(data["user_id"])))
+    beta = np.zeros(len(set(data["question_id"])))
 
     val_acc_lst = []
+    tr_lld = []
+    val_lld = []
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
+        tr_lld.append(-1 * neg_lld)
+        val_lld.append(-1 * neg_log_likelihood(data=val_data, theta=theta, beta=beta))
         score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
         print("NLLK: {} \t Score: {}".format(neg_lld, score))
         theta, beta = update_theta_beta(data, lr, theta, beta)
 
     # TODO: You may change the return values to achieve what you want.
-    return theta, beta, val_acc_lst
+    return theta, beta, val_acc_lst, tr_lld, val_lld
 
 
 def evaluate(data, theta, beta):
@@ -122,7 +133,28 @@ def main():
     # Tune learning rate and number of iterations. With the implemented #
     # code, report the validation and test accuracy.                    #
     #####################################################################
-    pass
+    # Hyperparameters
+    lr = 0.002
+    iterations = 50
+
+    # Initialize theta and beta
+    theta, beta, val_acc_lst, tr_lld, val_lld = irt(train_data, val_data, lr, iterations)
+
+    # Plotting the log-likelihoods
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(iterations), tr_lld, label='Training Log-Likelihood')
+    plt.plot(range(iterations), val_lld, label='Validation Log-Likelihood')
+    plt.xlabel('Iterations')
+    plt.ylabel('Negative Log-Likelihood')
+    plt.title('Training and Validation Log-Likelihood vs. Iterations')
+    plt.legend()
+    plt.show()
+
+    # Final evaluation
+    val_acc = evaluate(val_data, theta, beta)
+    test_acc = evaluate(test_data, theta, beta)
+    print(f"Final validation accuracy: {val_acc}")
+    print(f"Final test accuracy: {test_acc}")
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -139,3 +171,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
