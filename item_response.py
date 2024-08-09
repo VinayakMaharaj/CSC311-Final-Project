@@ -26,6 +26,7 @@ def neg_log_likelihood(data, theta, beta):
     log_lklihood = 0.0
     epsilon = 1e-10  # to prevent a log error
 
+    # iterating through data points
     for n in range(len(data["user_id"])):
         i, j, c = data["user_id"][n], data["question_id"][n], data["is_correct"][n]
         sig = sigmoid(theta[i] - beta[j])
@@ -83,24 +84,26 @@ def irt(data, val_data, lr, iterations):
     :return: (theta, beta, val_acc_lst)
     """
     # initialize theta and beta
-    theta = np.zeros(len(set(data["user_id"])))
-    beta = np.zeros(len(set(data["question_id"])))
+    theta = np.zeros(542)
+    beta = np.zeros(1774)
 
+    tr_acc_lst = []
     val_acc_lst = []
     tr_lld = []
     val_lld = []
 
-    for i in range(iterations):
+    for _ in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
         tr_lld.append(-1 * neg_lld)
         val_lld.append(-1 * neg_log_likelihood(data=val_data, theta=theta, beta=beta))
-        score = evaluate(data=val_data, theta=theta, beta=beta)
-        val_acc_lst.append(score)
-        print("NLLK: {} \t Score: {}".format(neg_lld, score))
+        score_tr = evaluate(data=data, theta=theta, beta=beta)
+        tr_acc_lst.append(score_tr)
+        score_val = evaluate(data=val_data, theta=theta, beta=beta)
+        val_acc_lst.append(score_val)
+        print("NLLK: {} \t Score: {}".format(neg_lld, score_val))
         theta, beta = update_theta_beta(data, lr, theta, beta)
 
-    # TODO: You may change the return values to achieve what you want.
-    return theta, beta, val_acc_lst, tr_lld, val_lld
+    return theta, beta, tr_acc_lst, val_acc_lst, tr_lld, val_lld
 
 
 def evaluate(data, theta, beta):
@@ -128,17 +131,18 @@ def main():
     val_data = load_valid_csv("./data")
     test_data = load_public_test_csv("./data")
 
-    #####################################################################
-    # TODO:                                                             #
-    # Tune learning rate and number of iterations. With the implemented #
-    # code, report the validation and test accuracy.                    #
-    #####################################################################
     # Hyperparameters
     lr = 0.002
     iterations = 50
 
     # Initialize theta and beta
-    theta, beta, val_acc_lst, tr_lld, val_lld = irt(train_data, val_data, lr, iterations)
+    theta, beta, tr_acc_lst, val_acc_lst, tr_lld, val_lld = irt(train_data, val_data, lr, iterations)
+
+    # Reporting Accuracies
+    val_acc = evaluate(val_data, theta, beta)
+    test_acc = evaluate(test_data, theta, beta)
+    print(f"Final validation accuracy: {val_acc}")
+    print(f"Final test accuracy: {test_acc}")
 
     # Plotting the log-likelihoods
     plt.figure(figsize=(10, 5))
@@ -150,25 +154,28 @@ def main():
     plt.legend()
     plt.show()
 
-    # Final evaluation
-    val_acc = evaluate(val_data, theta, beta)
-    test_acc = evaluate(test_data, theta, beta)
-    print(f"Final validation accuracy: {val_acc}")
-    print(f"Final test accuracy: {test_acc}")
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    # Plotting the Accuracies
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(iterations), tr_acc_lst, label='Training Accuracy')
+    plt.plot(range(iterations), val_acc_lst, label='Validation Accuracy')
+    plt.xlabel('Iterations')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracies as a Function of Iteration')
+    plt.legend()
+    plt.show()
 
-    #####################################################################
-    # TODO:                                                             #
-    # Implement part (d)                                                #
-    #####################################################################
-    pass
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    # Plotting p(c_ij = 1) as a function of beta given question j
+    questions = np.random.choice(1774, 3, replace=False)
+    theta = np.linspace(min(theta), max(theta), 100)
+
+    plt.figure(figsize=(10, 5))
+    for j in questions:
+        plt.plot(theta, sigmoid(theta - beta[j]), label=f"question j{j} beta {beta[j]}")
+    plt.xlabel("Theta")
+    plt.ylabel("Probability of the Correct Response")
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":
     main()
-
