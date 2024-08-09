@@ -149,7 +149,9 @@ def main():
 
     val_acc = evaluate(val_data, theta, beta, alpha)
     test_acc = evaluate(test_data, theta, beta, alpha)
-    print(f"Validation Accuracy: {val_acc:.4f} \nTest Accuracy: {test_acc:.4f}")
+    training_acc = evaluate(train_data, theta=theta, beta=beta, alpha=alpha)
+    # print(f"Validation Accuracy: {val_acc:.4f} \nTest Accuracy: {test_acc:.4f}")
+    print("Validation Accuracy: {} \n Test Accuracy: {} \n Training accuracy: {}".format(val_acc, test_acc, training_acc))
 
     # Plot probability curves for three questions
     questions = np.random.choice(1774, 3, replace=False)
