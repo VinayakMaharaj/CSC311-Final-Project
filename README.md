@@ -51,5 +51,6 @@ The results of the neural network and other models can be found in the generated
 
 final project q3 graph.png and final project q3 graph 2.png: Visualizations showing the model’s performance.
 final_report.pdf: Contains detailed analysis and discussion of the results.
+
 Conclusion
 This project covers multiple machine learning algorithms, with a special focus on the neural network model for question 3 and the modified IRT model for question 1. The addition of the student effort parameter in the IRT model has provided a significant improvement in the accuracy and log-likelihood compared to the baseline model. Further improvements and experimentation with regularization and parameter tuning can enhance model performance even more.
